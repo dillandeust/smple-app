@@ -1,0 +1,53 @@
+---
+
+# - name: Ensure the server's SSH key is added to known_hosts
+#   shell: ssh-keyscan -H {{ ansible_host }} >> ~/.ssh/known_hosts
+#   delegate_to: localhost
+#   when: ansible_ssh_common_args is defined
+
+- name: Create directory for GitHub Actions runner
+  file:
+    path: "{{ runner_install_dir }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+
+- name: Download GitHub Actions runner
+  get_url:
+    url: "{{ runner_download_url }}"
+    dest: "{{ runner_install_dir }}/actions-runner-linux-x64-{{ runner_version }}.tar.gz"
+    mode: '0644'
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+
+- name: Verify the checksum of the downloaded runner package
+  command: "shasum -a 256 {{ runner_install_dir }}/actions-runner-linux-x64-{{ runner_version }}.tar.gz"
+  register: checksum_output
+
+- name: Fail if checksum does not match
+  fail:
+    msg: "Checksum verification failed!"
+  when: "'{{ runner_checksum }}' not in checksum_output.stdout"
+
+- name: Extract the runner package
+  unarchive:
+    src: "{{ runner_install_dir }}/actions-runner-linux-x64-{{ runner_version }}.tar.gz"
+    dest: "{{ runner_install_dir }}"
+    remote_src: yes
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+
+- name: Configure the GitHub Actions runner
+  become: no
+  command: "./config.sh --url {{ github_repo }} --token {{ github_token }} --unattended --replace"
+  args:
+    chdir: "{{ runner_install_dir }}"
+
+- name: Start the GitHub Actions runner
+  command: "./run.sh"
+  args:
+    chdir: "{{ runner_install_dir }}"
+  async: 3600
+  poll: 0

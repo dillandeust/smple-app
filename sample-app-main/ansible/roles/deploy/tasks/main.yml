@@ -1,0 +1,78 @@
+---
+    - name: Ensure Ansible uses Python 3
+      ansible.builtin.setup:
+      vars:
+        ansible_python_interpreter: /usr/bin/python3
+      
+    - name: Ensure Docker is running
+      systemd:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Install docker-compose CLI
+      get_url:
+        url: https://github.com/docker/compose/releases/download/1.29.2/docker-compose-Linux-x86_64
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+      become: yes
+
+    - name: Ensure docker-compose is in PATH
+      shell: echo $PATH
+      register: path_output
+
+    - name: Add /usr/local/bin to PATH if not present
+      lineinfile:
+        path: /etc/profile
+        line: 'export PATH=$PATH:/usr/local/bin'
+        state: present
+      when: "'/usr/local/bin' not in path_output.stdout"
+      become: yes
+
+    - name: Log in to private registry on remote server
+      docker_login:
+        registry_url: "{{ registry_url }}"
+        username: "{{ registry_username }}"
+        password: "{{ registry_password }}"
+
+    - name: Create the application directory on the server
+      file:
+        path: /home/azureuser/sampleapp
+        state: directory
+        owner: azureuser
+        group: azureuser
+        mode: '0755'
+
+    - name: Copy the .env file to the server
+      copy:
+        src: files/.env.example
+        dest: /home/azureuser/sampleapp/.env
+        owner: azureuser
+        group: azureuser
+        mode: '0644'
+
+    - name: Copy the docker-compose.yaml file to the server
+      copy:
+        src: files/docker-compose.yaml
+        dest: /home/azureuser/sampleapp/docker-compose.yaml
+        owner: azureuser
+        group: azureuser
+        mode: '0644'
+
+    - name: Pull the latest image from the registry
+      shell: docker pull server803632.westeurope.cloudapp.azure.com/library/sampleapp:latest
+      args:
+        chdir: /home/azureuser/sampleapp
+      become: yes
+
+    - name: Stop and remove old container
+      shell: docker-compose down
+      args:
+        chdir: /home/azureuser/sampleapp
+      become: yes
+
+    - name: Start the new container with docker-compose
+      shell: docker-compose up -d
+      args:
+        chdir: /home/azureuser/sampleapp
+      become: yes

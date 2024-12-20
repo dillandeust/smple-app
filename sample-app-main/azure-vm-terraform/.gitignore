@@ -1,0 +1,14 @@
+# Dossier de configuration et de cache de Terraform
+.terraform/
+ 
+# Fichiers d'état Terraform et journaux
+terraform.tfstate
+terraform.tfstate.backup
+*.tfstate
+*.tfstate.backup
+*.log# Plans Terraform
+*.tfplan
+ 
+# Clés SSH
+*.pem
+.key

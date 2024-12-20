@@ -1,0 +1,40 @@
+---
+# tasks/main.yml (azure_cli role)
+
+- name: Add Microsoft signing key for Azure CLI
+  apt_key:
+    url: https://packages.microsoft.com/keys/microsoft.asc
+    state: present
+
+- name: Get Ubuntu version codename
+  command: lsb_release -cs
+  register: ubuntu_version
+  changed_when: false
+
+- name: Debug Ubuntu version to verify the codename
+  debug:
+    msg: "The Ubuntu version codename is {{ ubuntu_version.stdout }}"
+
+- name: Add Azure CLI repository
+  apt_repository:
+    repo: "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ {{ ubuntu_version.stdout }} main"
+    state: present
+
+- name: Starting Azure CLI installation
+  debug:
+    msg: "Starting Azure CLI installation on {{ ansible_hostname }}"
+
+- name: Install Azure CLI
+  apt:
+    name: azure-cli
+    state: latest
+    update_cache: true
+
+- name: Verify Azure CLI installation
+  command: az --version
+  register: az_version_output
+  changed_when: false
+
+- name: Debug Azure CLI installation result
+  debug:
+    var: az_version_output.stdout

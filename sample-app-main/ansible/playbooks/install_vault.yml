@@ -1,0 +1,5 @@
+---
+- hosts: vault_servers
+  become: yes
+  roles:
+    - vault

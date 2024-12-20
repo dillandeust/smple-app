@@ -1,0 +1,201 @@
+# ---
+# # roles/sign_ssh_key/tasks/main.yml
+
+# # - name: Define path to store SSH key on localhost
+# #   set_fact:
+# #     local_ssh_key_path: "~/.ssh/ansible_keys/deploy_key"
+# #     local_public_key_path: "{{ local_ssh_key_path }}.pub"
+# #     local_cert_path: "{{ local_ssh_key_path }}-cert.pub"
+
+# - name: Debug value of lookup('env', 'USER')
+#   debug:
+#     msg: "The current user is {{ lookup('env', 'USER') }}"
+
+# - name: Run ls to list ~/.ssh directory
+#   command: ls -la ~/.ssh
+#   register: ssh_dir_listing
+
+# - name: Display the content of ~/.ssh directory
+#   debug:
+#     var: ssh_dir_listing.stdout
+
+# - name: Ensure the SSH key directory exists
+#   file:
+#     path: "/home/{{ lookup('env', 'USER') }}/.ssh"
+#     state: directory
+#     mode: '0700'
+#     owner: "{{ lookup('env', 'USER') }}"
+#     group: "{{ lookup('env', 'USER') }}"
+
+# - name: Debug before defining path to store SSH key
+#   debug:
+#     msg: "About to define local_ssh_key_path"
+
+# - name: Define path to store SSH key on localhost
+#   set_fact:
+#     local_ssh_key_path: "/home/{{ lookup('env', 'USER') }}/.ssh"
+#     local_public_key_path: "{{ local_ssh_key_path }}.pub"
+#     local_cert_path: "{{ local_ssh_key_path }}-cert.pub"
+
+# - name: Debug SSH key path variables
+#   debug:
+#     msg:
+#       - "SSH key path: {{ local_ssh_key_path }}"
+#       - "Public key path: {{ local_public_key_path }}"
+#       - "Certificate path: {{ local_cert_path }}"
+
+# - name: Ensure the ansible_keys directory exists on localhost
+#   file:
+#     path: "{{ local_ssh_key_path | dirname }}"
+#     state: directory
+#     mode: '0700'
+#     owner: "{{ lookup('env', 'USER') }}"
+#     group: "{{ lookup('env', 'USER') }}"
+
+# - name: Check if the SSH private key exists
+#   stat:
+#     path: "{{ local_ssh_key_path }}"
+#   register: ssh_keypair_stat
+
+# - name: Generate a new SSH key pair if it does not exist
+#   openssh_keypair:
+#     path: "{{ local_ssh_key_path }}"
+#     type: rsa
+#     size: 4096
+#   when: ssh_keypair_stat.stat.exists == false
+
+# - name: Ping Vault server to check connectivity
+#   uri:
+#    url: "{{ vault_addr }}/v1/sys/health"
+#    method: GET
+#    return_content: yes
+#    headers:
+#         X-Vault-Token: "{{ vault_token }}"
+#   register: vault_health
+
+# - name: Debug Vault server health status
+#   debug:
+#     var: vault_health
+
+# - name: Retrieve the public SSH key
+#   slurp:
+#     src: "{{ local_public_key_path }}"
+#   register: public_key_content
+
+# - name: Sign the SSH public key with Vault
+#   uri:
+#     url: "{{ vault_addr }}/v1/ssh/sign/my-role"
+#     method: POST
+#     headers:
+#       X-Vault-Token: "{{ vault_token }}"
+#     body_format: json
+#     body:
+#       public_key: "{{ public_key_content.content | b64decode }}"
+#       ttl: "30m"
+#   register: signed_cert
+
+# - name: Extract signed SSH certificate
+#   set_fact:
+#     signed_ssh_cert: "{{ signed_cert.json.data.signed_key }}"
+
+# - name: Write the signed SSH certificate to a file
+#   copy:
+#     content: "{{ signed_ssh_cert }}"
+#     dest: "{{ local_cert_path }}"
+#     mode: '0644'
+#     owner: "{{ lookup('env', 'USER') }}"
+#     group: "{{ lookup('env', 'USER') }}"
+
+---
+# roles/sign_ssh_key/tasks/main.yml
+
+# roles/sign_ssh_key/tasks/main.yml
+
+# Assurez-vous que le répertoire ~/.ssh existe
+- name: Debug the signing process
+  debug:
+    msg: "Signing SSH key for {{ lookup('env', 'USER') }}"
+
+- name: Ensure the .ssh directory exists
+  file:
+    path: "/home/{{ lookup('env', 'USER') }}/.ssh"
+    state: directory
+    mode: '0700'
+    owner: "{{ lookup('env', 'USER') }}"
+    group: "{{ lookup('env', 'USER') }}"
+
+# Rechercher une clé publique RSA existante dans ~/.ssh/
+- name: Find the RSA SSH public key in ~/.ssh/
+  find:
+    paths: "/home/{{ lookup('env', 'USER') }}/.ssh"
+    patterns: "id_rsa.pub"
+    file_type: file
+  register: rsa_public_key_files
+
+# Générer une paire de clés SSH RSA si aucune clé publique RSA n'est trouvée
+- name: Generate a new RSA SSH key pair if no RSA public key is found
+  openssh_keypair:
+    path: "/home/{{ lookup('env', 'USER') }}/.ssh/id_rsa"
+    type: rsa
+    size: 4096
+  when: rsa_public_key_files.matched == 0
+
+# Trouver à nouveau les clés publiques RSA après la génération
+- name: Find the RSA SSH public key again after generation
+  find:
+    paths: "/home/{{ lookup('env', 'USER') }}/.ssh"
+    patterns: "id_rsa.pub"
+    file_type: file
+  register: rsa_public_key_files_after
+
+# Échouer si aucune clé publique RSA n'est trouvée même après la génération
+- name: Fail if no RSA SSH public key exists even after generation
+  fail:
+    msg: "No RSA SSH public key exists in ~/.ssh/, even after generating keys!"
+  when: rsa_public_key_files_after.matched == 0
+
+# Si une clé publique RSA est trouvée, la signer avec Vault
+- name: Retrieve the RSA public SSH key content
+  slurp:
+    src: "{{ rsa_public_key_files_after.files[0].path }}"
+  register: rsa_public_key_content
+
+# Signer la clé publique RSA avec Vault et obtenir le certificat signé
+- name: Sign the RSA SSH public key with Vault
+  uri:
+    url: "{{ vault_addr }}/v1/ssh/sign/my-role"
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body_format: json
+    body:
+      public_key: "{{ rsa_public_key_content.content | b64decode }}"
+      ttl: "30m"
+      valid_principals: "azureuser"
+  register: signed_cert
+
+# Définir le chemin du certificat SSH signé
+- name: Set the path for the signed RSA SSH certificate
+  set_fact:
+    local_cert_path: "{{ rsa_public_key_files_after.files[0].path | regex_replace('(.pub)$', '-cert.pub') }}"
+
+# Enregistrer le certificat signé dans ~/.ssh/
+- name: Write the signed RSA SSH certificate to a file
+  copy:
+    content: "{{ signed_cert.json.data.signed_key }}"
+    dest: "{{ local_cert_path }}"
+    mode: '0644'
+    owner: "{{ lookup('env', 'USER') }}"
+    group: "{{ lookup('env', 'USER') }}"
+
+# Vérifier que le certificat SSH signé existe
+- name: Check if the signed RSA SSH certificate exists
+  stat:
+    path: "{{ local_cert_path }}"
+  register: rsa_cert_stat
+
+# Échouer si le certificat signé RSA n'existe pas
+- name: Fail if the signed RSA SSH certificate does not exist
+  fail:
+    msg: "The RSA SSH signed certificate {{ local_cert_path }} was not created!"
+  when: rsa_cert_stat.stat.exists == false

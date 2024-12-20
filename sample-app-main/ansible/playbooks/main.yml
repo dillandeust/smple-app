@@ -1,0 +1,45 @@
+- name: Retrieve SSH key locally and sign it via Vault
+  hosts: localhost
+  gather_facts: no
+  vars_files:
+    - ../vars/vault.yml
+  roles:
+    - sign_ssh_key
+
+- name: Install Docker on remote server
+  hosts: azure_vms
+  remote_user: azureuser
+  become: yes
+  vars_files:
+    - ../vars/vault.yml
+  roles:
+    - docker
+
+- name: Install Azure CLI on remote server
+  hosts: azure_vms
+  remote_user: azureuser
+  become: yes
+  vars_files:
+    - ../vars/vault.yml
+  roles:
+    - azure_cli
+
+- name: Install GitLab Runner on remote server
+  hosts: azure_vms
+  remote_user: azureuser
+  become: yes
+  vars_files:
+    - ../vars/vault.yml
+  roles:
+    - gitlab_runner
+
+- name: Clean up SSH keys after usage on localhost
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Remove the private and certificate files after use
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "~/.ssh/id_rsa-cert.pub"

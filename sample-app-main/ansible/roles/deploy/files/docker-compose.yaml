@@ -1,0 +1,70 @@
+version: '3'
+services:
+  traefik:
+    image: "traefik:v2.4"
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=youba.djaouti@epitech.eu"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+      - "--entrypoints.metrics.address=:8082"
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.entryPoint=metrics"
+      - "--log.level=DEBUG"  # Log de debug pour vérifier les erreurs potentiellement liées à Let's Encrypt
+    ports:
+      - "80:80"  # HTTP
+      - "443:443"  # HTTPS
+      - "8082:8082"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "letsencrypt:/letsencrypt"  # Volume pour stocker les certificats Let's Encrypt
+    labels:
+      - "traefik.http.routers.http-catchall.rule=HostRegexp(`{host:.+}`)"
+      - "traefik.http.routers.http-catchall.entrypoints=web"
+      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+
+  app:
+    image: "server803632.westeurope.cloudapp.azure.com/library/sampleapp:latest"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8081:80"
+    environment:
+      APP_DEBUG: "true"
+      APP_ENV: "production"
+      APP_KEY: "base64:DJYTvaRkEZ/YcQsX3TMpB0iCjgme2rhlIOus9A1hnj4="
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: app_database
+      DB_USERNAME: app_user
+      DB_PASSWORD: app_password
+    depends_on:
+      - db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app.rule=Host(`client571764.westeurope.cloudapp.azure.com`)"  # Remplacez par votre domaine
+      - "traefik.http.routers.app.entrypoints=websecure"  # Utiliser HTTPS
+      - "traefik.http.routers.app.tls.certresolver=myresolver"  # Let's Encrypt resolver pour HTTPS
+      - "traefik.http.services.app.loadbalancer.server.port=80"  # Rediriger vers le bon port
+
+
+  db:
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_DATABASE: app_database
+      MYSQL_USER: app_user
+      MYSQL_PASSWORD: app_password
+      MYSQL_ROOT_PASSWORD: app_root_password
+    volumes:
+      - db_data:/var/lib/mysql
+
+volumes:
+  db_data:
+  letsencrypt:  # Volume pour les certificats Let's Encrypt

@@ -1,0 +1,29 @@
+---
+- name: Retrieve SSH key locally and sign it via Vault
+  hosts: localhost
+  gather_facts: no
+  vars_files:
+    - ../vars/vault.yml
+  roles:
+    - sign_ssh_key
+
+- name: Install Azure CLI on remote server
+  hosts: azure_vms
+  remote_user: azureuser
+  gather_facts: yes  # Activation de la collecte des faits pour vérifier le système
+  become: yes
+  # vars:
+  #  ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o CertificateFile=/home/{{ lookup("env", "USER") }}/.ssh/id_rsa-cert.pub -o UserKnownHostsFile=/dev/null'
+  roles:
+    - azure_cli
+
+- name: Clean up SSH keys after usage on localhost
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Remove the private and certificate files after use
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "~/.ssh/id_rsa-cert.pub"

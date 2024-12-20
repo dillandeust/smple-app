@@ -1,0 +1,9 @@
+* text=auto
+*.blade.php diff=html
+*.css diff=css
+*.html diff=html
+*.md diff=markdown
+*.php diff=php
+/.github export-ignore
+CHANGELOG.md export-ignore
+azure-vm-terraform/.terraform/providers/registry.terraform.io/hashicorp/azurerm/4.2.0/linux_amd64/terraform-provider-azurerm_v4.2.0_x5 filter=lfs diff=lfs merge=lfs -text

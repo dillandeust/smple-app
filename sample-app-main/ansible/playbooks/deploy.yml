@@ -1,0 +1,32 @@
+---
+- name: Retrieve SSH key locally and sign it via Vault
+  hosts: localhost
+  gather_facts: no
+  vars_files:
+    - ../vars/vault.yml
+  roles:
+    - sign_ssh_key
+
+- name: deploy sampleapp image
+  hosts: azure_vms
+  remote_user: azureuser
+  vars:
+    docker_image: "{{ docker_image }}"
+    registry_url: "https://server803632.westeurope.cloudapp.azure.com//"
+    registry_username: "{{ registry_username }}"
+    registry_password: "{{ registry_password }}"
+    ansible_python_interpreter: /usr/bin/python3
+  become: yes
+  roles:
+    - deploy
+
+- name: Clean up SSH keys after usage on localhost
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Remove the private and certificate files after use
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "~/.ssh/id_rsa-cert.pub"

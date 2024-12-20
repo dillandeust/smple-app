@@ -1,0 +1,12 @@
+storage "file" {
+  path = "/opt/vault/data"
+}
+
+listener "tcp" {
+  address     = "0.0.0.0:8200"
+  tls_cert_file = "/etc/letsencrypt/live/server803632.westeurope.cloudapp.azure.com/fullchain.pem"
+  tls_key_file  = "/etc/letsencrypt/live/server803632.westeurope.cloudapp.azure.com/privkey.pem"
+}
+
+disable_mlock = true
+ui = true
