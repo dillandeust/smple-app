@@ -1,6 +1,10 @@
 #!/bin/bash
 # Script de démarrage personnalisé pour Azure Web App
 
+echo "Clearing and caching config..."
+php artisan config:clear
+php artisan config:cache
+
 echo "Running migrations..."
 php artisan migrate --force
 
