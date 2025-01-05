@@ -1,7 +1,75 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
+# # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy PHP app to Azure Web App - tahapp
+# name: Build and deploy PHP app to Azure Web App - tahapp
+
+# on:
+#   push:
+#     branches:
+#       - main
+#   workflow_dispatch:
+
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - uses: actions/checkout@v4
+
+#       - name: Setup PHP
+#         uses: shivammathur/setup-php@v2
+#         with:
+#           php-version: '8.3'
+
+#       - name: Check if composer.json exists
+#         id: check_files
+#         uses: andstor/file-existence-action@v1
+#         with:
+#           files: 'composer.json'
+
+#       - name: Run composer install if composer.json exists
+#         if: steps.check_files.outputs.files_exists == 'true'
+#         run: composer validate --no-check-publish && composer install --prefer-dist --no-progress
+
+#       - name: Zip artifact for deployment
+#         run: zip release.zip ./* -r
+
+#       - name: Upload artifact for deployment job
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: php-app
+#           path: release.zip
+
+#   deploy:
+#     runs-on: ubuntu-latest
+#     needs: build
+#     environment:
+#       name: 'Production'
+#       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    
+#     steps:
+#       - name: Download artifact from build job
+#         uses: actions/download-artifact@v4
+#         with:
+#           name: php-app
+
+#       - name: Unzip artifact for deployment
+#         run: unzip release.zip
+      
+#       - name: 'Deploy to Azure Web App'
+#         uses: azure/webapps-deploy@v3
+#         id: deploy-to-webapp
+#         with:
+#           app-name: 'tahapp'
+#           slot-name: 'Production'
+#           package: .
+#           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_2E3AA514745B4508ACD28EEBD1C555D4 }}
+
+
+
+
+
+name: Build and deploy Laravel app to Azure Web App - tahapp
 
 on:
   push:
@@ -14,30 +82,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
+          extensions: mbstring, intl, bcmath, curl, pdo, mysql
 
-      - name: Check if composer.json exists
-        id: check_files
-        uses: andstor/file-existence-action@v1
-        with:
-          files: 'composer.json'
+      - name: Install Composer dependencies
+        run: |
+          composer validate --no-check-publish
+          composer install --prefer-dist --no-progress --no-suggest
 
-      - name: Run composer install if composer.json exists
-        if: steps.check_files.outputs.files_exists == 'true'
-        run: composer validate --no-check-publish && composer install --prefer-dist --no-progress
+      - name: Run Laravel tests
+        run: php artisan test --no-interaction
 
-      - name: Zip artifact for deployment
-        run: zip release.zip ./* -r
+      - name: Build Laravel application
+        run: |
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+
+      - name: Zip application for deployment
+        run: zip -r release.zip ./*
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
-          name: php-app
+          name: laravel-app
           path: release.zip
 
   deploy:
@@ -51,12 +125,12 @@ jobs:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
-          name: php-app
+          name: laravel-app
 
       - name: Unzip artifact for deployment
         run: unzip release.zip
       
-      - name: 'Deploy to Azure Web App'
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
@@ -64,3 +138,9 @@ jobs:
           slot-name: 'Production'
           package: .
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_2E3AA514745B4508ACD28EEBD1C555D4 }}
+
+      - name: Run Laravel migrations
+        run: php artisan migrate --force
+
+      - name: Seed database
+        run: php artisan db:seed --force
