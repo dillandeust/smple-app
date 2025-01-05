@@ -117,7 +117,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: laravel-app
-          path: release.zip
+          path: sample-app-main/release.zip
 
   deploy:
     runs-on: ubuntu-latest
