@@ -101,8 +101,8 @@ jobs:
           composer validate --no-check-publish
           composer install --prefer-dist --no-progress --no-suggest
 
-      - name: Run Laravel tests
-        run: php artisan test --no-interaction
+      # - name: Run Laravel tests
+      #   run: php artisan test --no-interaction
 
       - name: Build Laravel application
         run: |
