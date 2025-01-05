@@ -94,6 +94,7 @@ jobs:
       - name: Install Composer dependencies
         run: |
           cd sample-app-main/
+          composer update --no-interaction
           composer validate --no-check-publish
           composer install --prefer-dist --no-progress --no-suggest
 
