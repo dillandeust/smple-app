@@ -144,8 +144,4 @@ jobs:
           package: .
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_2E3AA514745B4508ACD28EEBD1C555D4 }}
 
-      - name: Run Laravel migrations
-        run: php artisan migrate --force
 
-      - name: Seed database
-        run: php artisan db:seed --force
