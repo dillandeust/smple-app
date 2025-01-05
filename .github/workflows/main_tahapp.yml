@@ -77,9 +77,6 @@ on:
       - main
   workflow_dispatch:
 
-defaults:
-  run:
-    working-directory: sample-app-main  # Définit "sample-app-main" comme répertoire de travail pour toutes les étapes
 
 jobs:
   build:
@@ -100,6 +97,7 @@ jobs:
           composer update --no-interaction
           composer validate --no-check-publish
           composer install --prefer-dist --no-progress --no-suggest
+        working-directory: sample-app-main
 
       # - name: Run Laravel tests
       #   run: php artisan test --no-interaction
@@ -109,9 +107,11 @@ jobs:
           php artisan config:cache
           php artisan route:cache
           php artisan view:cache
+        working-directory: sample-app-main
 
       - name: Zip application for deployment
         run: zip -r release.zip ./*
+        working-directory: sample-app-main
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
