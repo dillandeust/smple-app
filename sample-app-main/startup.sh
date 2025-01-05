@@ -13,4 +13,4 @@ php artisan db:seed --force
 
 echo "Starting Laravel app..."
 # Démarrer le serveur web (exemple : php artisan serve)
-php artisan serve --host=0.0.0.0 --port=8000
+php artisan serve 
